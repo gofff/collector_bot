@@ -2,6 +2,8 @@ import argparse
 import sys
 import os
 
+from collector_bot import CollectorBot
+
 def read_token(token_filename: str) -> str:
     with open(token_filename, 'r') as token_file:
         return token_file.readline().strip()
@@ -14,4 +16,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     token = read_token(args.token_path)
     print(token)
-    
+
+    CollectorBot(token).start()
