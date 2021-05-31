@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "collector_bot"
+version = "0.1.0"
+description = ""
+authors = ["gofff <khatiullin@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+python-telegram-bot = "^13.5"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
