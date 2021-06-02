@@ -1,67 +1,109 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Updater,
+    Filters,
     CommandHandler,
     CallbackQueryHandler,
+    MessageHandler,
     ConversationHandler,
     CallbackContext,
 )
 
+CREATE, START, PAUSE, EDIT, DELETE, DOWNLOAD = map(chr, range(6))
+SELECTING_ACTION, STOPPING = map(chr, range(7, 9))
+SET_NAME, SET_TIME, SET_QUESTION = map(chr, range(9, 12))
+CHOOSE_NAME = chr(12)
+START_OVER = chr(13)
 
-def start(update: Update, _: CallbackContext) -> str:
-    keyboard = [
-        [InlineKeyboardButton("Create shedule", 
-                              callback_data="create_new")],
-        [InlineKeyboardButton("Start new shedule",
-                              callback_data="start_shedule")],
-        [InlineKeyboardButton("Pause shedule",
-                              callback_data="pause_shedule")],
-        [InlineKeyboardButton("Edit shedule",
-                              callback_data="edit_shedule")],
-        [InlineKeyboardButton("Delete shedule",
-                              callback_data="delete_shedule")],
-        [InlineKeyboardButton("Download data",
-                              callback_data="download data")],
+# Top level conversation callbacks
+def start(update: Update, context: CallbackContext) -> str:
+    """Select an action"""
+    text = (
+        "Choose action"
+    )
+
+    buttons = [
+        [
+            InlineKeyboardButton("Create shedule", 
+                                  callback_data=str(CREATE)),
+            InlineKeyboardButton("Delete shedule",
+                                  callback_data=str(DELETE)),
+        ],
+        [
+            InlineKeyboardButton("Start shedule",
+                                  callback_data=str(START)),
+            InlineKeyboardButton("Pause shedule",
+                                  callback_data=str(PAUSE)),
+        ],
+        [
+            InlineKeyboardButton("Edit shedule",
+                                  callback_data=str(EDIT)),
+            InlineKeyboardButton("Download data",
+                                  callback_data=str(DOWNLOAD)),
+        ],
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text("Choose action", reply_markup=reply_markup)
-    return 'BEGIN'
+    keyboard = InlineKeyboardMarkup(buttons)
+
+    # If we're starting over we don't need to send a new message
+    if context.user_data.get(START_OVER):
+        update.callback_query.answer()
+        update.callback_query.edit_message_text(text=text, reply_markup=keyboard)
+    else:
+        update.message.reply_text(
+            "Hi, i will help you to shedule questions and store answers"
+        )
+        update.message.reply_text(text=text, reply_markup=keyboard)
+
+    context.user_data[START_OVER] = False
+    return SELECTING_ACTION
+
 
 def create_shedule(update: Update, _: CallbackContext) -> str:
     query = update.callback_query
     query.answer()
-    query.edit_message_text(text="Create new")
-    return 'BEGIN'
+    query.edit_message_text(text="Creating shedule. Type name")
+    return SET_NAME
 
-def start_shedule(update: Update, _: CallbackContext) -> str:
-    query = update.callback_query
-    query.answer()
-    query.edit_message_text(text="Start shedule")
-    return 'BEGIN'
+def set_name(update: Update, _: CallbackContext) -> str:
+    name_str = update.message.text
+    print(name_str)
+    update.message.reply_text(f"Setting name to {name_str}")
+    update.message.reply_text("Set time")
+    return SET_TIME
+
+def set_time(update: Update, _: CallbackContext) -> str:
+    time_str = update.message.text
+    print(time_str)
+    update.message.reply_text(f"Setting time to {time_str}")
+    update.message.reply_text("Select question")
+    return SET_QUESTION
+
+def set_question(update: Update, _: CallbackContext) -> str:
+    time_str = update.message.text
+    print(time_str)
+    update.message.reply_text(f"Setting question to {time_str}")
+    update.message.reply_text("done")
+    return STOPPING
 
 def pause_shedule(update: Update, _: CallbackContext) -> str:
     query = update.callback_query
     query.answer()
-    query.edit_message_text(text="Pause shedule")
-    return 'BEGIN'
+    query.edit_message_text(text="Pausing shedule. Choose shedule")
+    return CHOOSE_NAME
 
-def edit_shedule(update: Update, _: CallbackContext) -> str:
+def choose_name(update: Update, _: CallbackContext) -> str:
+    name_str = update.message.text
+    print(name_str)
+    update.message.reply_text(f"Choosing name {name_str}")
+    update.message.reply_text("Done")
+    return STOPPING
+
+def download(update: Update, _: CallbackContext) -> str:
     query = update.callback_query
     query.answer()
-    query.edit_message_text(text="Edit shedule")
-    return 'BEGIN'
+    query.edit_message_text(text="Download results. Choose shedule")
+    return CHOOSE_NAME
 
-def delete_shedule(update: Update, _: CallbackContext) -> str:
-    query = update.callback_query
-    query.answer()
-    query.edit_message_text(text="Delete shedule")
-    return 'BEGIN'
-
-def download_data(update: Update, _: CallbackContext) -> str:
-    query = update.callback_query
-    query.answer()
-    query.edit_message_text(text="Download data")
-    return 'BEGIN'
 
 class CollectorBot:
     def __init__(self, token: str) -> None:
@@ -69,17 +111,50 @@ class CollectorBot:
         self.dispatcher = self.updater.dispatcher
 
     def start(self) -> None:
+
+        create_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(create_shedule, 
+                                               pattern = f'^{CREATE}$')],
+            states={
+                SET_NAME: [MessageHandler(Filters.text, set_name)],
+                SET_TIME: [MessageHandler(Filters.text, set_time)],
+                SET_QUESTION: [MessageHandler(Filters.text, set_question)],
+            },
+            fallbacks=[],
+            map_to_parent = { STOPPING: STOPPING }
+        )
+
+        pause_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(pause_shedule, 
+                                               pattern = f'^{PAUSE}$')],
+            states={
+                CHOOSE_NAME: [MessageHandler(Filters.text, choose_name)],
+            },
+            fallbacks=[],
+            map_to_parent = { STOPPING: STOPPING }
+        )
+
+        download_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(download, 
+                                               pattern = f'^{DOWNLOAD}$')],
+            states={
+                CHOOSE_NAME: [MessageHandler(Filters.text, choose_name)],
+            },
+            fallbacks=[],
+            map_to_parent = { STOPPING: STOPPING }
+        )
+
+        selection_handlers = [
+            create_handler,
+            pause_handler,
+            download_handler,
+        ]
+
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', start)],
             states={
-                'BEGIN': [
-                    CallbackQueryHandler(create_shedule, pattern='create_*'),
-                    CallbackQueryHandler(start_shedule, pattern='start_*'),
-                    CallbackQueryHandler(pause_shedule, pattern='pause_*'),
-                    CallbackQueryHandler(edit_shedule, pattern='edit_*'),
-                    CallbackQueryHandler(delete_shedule, pattern='delete_*'),
-                    CallbackQueryHandler(download_data, pattern='download_*'),
-                ],
+                SELECTING_ACTION: selection_handlers,
+                STOPPING: [CommandHandler('start', start)]
             },
             fallbacks=[CommandHandler('start', start)],
         )
