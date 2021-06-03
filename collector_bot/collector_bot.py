@@ -46,9 +46,7 @@ def start(update: Update, context: CallbackContext) -> str:
 
     return SELECTING_ACTION
 
-
 def set_time(update: Update, context: CallbackContext) -> str:
-    print(context.user_data['id'])
     time_str = update.message.text
     print(time_str)
     update.message.reply_text(f"Setting time to {time_str}")
@@ -56,7 +54,6 @@ def set_time(update: Update, context: CallbackContext) -> str:
     return SET_QUESTION
 
 def set_question(update: Update, context: CallbackContext) -> str:
-    print(context.user_data['id'])
     time_str = update.message.text
     print(time_str)
     update.message.reply_text(f"Setting question to {time_str}")
@@ -64,14 +61,12 @@ def set_question(update: Update, context: CallbackContext) -> str:
     return STOPPING
 
 def pause_shedule(update: Update, context: CallbackContext) -> str:
-    print(context.user_data['id'])
     query = update.callback_query
     query.answer()
     query.edit_message_text(text="Pausing shedule. Choose shedule")
     return CHOOSE_NAME
 
 def choose_name(update: Update, context: CallbackContext) -> str:
-    print(context.user_data['id'])
     name_str = update.message.text
     print(name_str)
     update.message.reply_text(f"Choosing name {name_str}")
@@ -79,15 +74,14 @@ def choose_name(update: Update, context: CallbackContext) -> str:
     return STOPPING
 
 def download(update: Update, context: CallbackContext) -> str:
-    print(context.user_data['id'])
     query = update.callback_query
     query.answer()
     query.edit_message_text(text="Download results. Choose shedule")
     return CHOOSE_NAME
 
 class Job:
-    def __init__(self, uid: int) -> None:
-        self.uid: int = uid
+    def __init__(self, job_id: int) -> None:
+        self.job_id: int = job_id
         self.name: str = ""
         self.chat_id: int = 0
 
@@ -99,7 +93,7 @@ class Job:
 
     def dump(self) -> None:
         print("=== Job ===")
-        print(f"uid: {self.uid}")
+        print(f"jid: {self.job_id}")
         print(f"cid: {self.chat_id}")
         print(f"name: {self.name}")
 
@@ -111,25 +105,23 @@ class CollectorBot:
         self.jobs: Dict[int, Job] = dict()
 
     def create_job(self, update: Update, context: CallbackContext) -> str:
-        uid = uuid.uuid4().int
-        context.user_data['id'] = uid
-        self.jobs[uid] = Job(uid)
+        job_id = uuid.uuid4().int
+        context.user_data["job_id"] = job_id
+        self.jobs[job_id] = Job(job_id)
         query = update.callback_query
         query.answer()
         query.edit_message_text(text="Type name to job")
         return SET_NAME
 
     def set_job_name(self, update: Update, context: CallbackContext) -> str:
-        uid = context.user_data["id"]
+        job_id = context.user_data["job_id"]
         chat_id = update.message.chat_id
         job_name = update.message.text
-        cur_job = self.jobs[uid]
+        cur_job = self.jobs[job_id]
         cur_job.set_chat_id(chat_id)
         cur_job.set_name(job_name)
-        for job_key in self.jobs:
-            self.jobs[job_key].dump()
         update.message.reply_text(f"Setting name to {job_name}")
-        update.message.reply_text("Set time")
+        update.message.reply_text("Set time to job")
         return SET_TIME
 
     def start(self) -> None:
