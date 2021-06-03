@@ -12,6 +12,8 @@ from telegram.ext import (
     CallbackContext,
 )
 
+from job import Job
+
 CREATE, START, PAUSE, EDIT, DELETE, DOWNLOAD = map(chr, range(6))
 SELECTING_ACTION, STOPPING = map(chr, range(7, 9))
 SET_NAME, SET_TIME, SET_QUESTION = map(chr, range(9, 12))
@@ -22,19 +24,19 @@ def start(update: Update, context: CallbackContext) -> str:
     """Select an action"""
     buttons = [
         [
-            InlineKeyboardButton("Create shedule", 
+            InlineKeyboardButton("Create job", 
                                   callback_data=str(CREATE)),
-            InlineKeyboardButton("Delete shedule",
+            InlineKeyboardButton("Delete job",
                                   callback_data=str(DELETE)),
         ],
         [
-            InlineKeyboardButton("Start shedule",
+            InlineKeyboardButton("Start job",
                                   callback_data=str(START)),
-            InlineKeyboardButton("Pause shedule",
+            InlineKeyboardButton("Pause job",
                                   callback_data=str(PAUSE)),
         ],
         [
-            InlineKeyboardButton("Edit shedule",
+            InlineKeyboardButton("Edit job",
                                   callback_data=str(EDIT)),
             InlineKeyboardButton("Download data",
                                   callback_data=str(DOWNLOAD)),
@@ -79,23 +81,6 @@ def download(update: Update, context: CallbackContext) -> str:
     query.edit_message_text(text="Download results. Choose shedule")
     return CHOOSE_NAME
 
-class Job:
-    def __init__(self, job_id: int) -> None:
-        self.job_id: int = job_id
-        self.name: str = ""
-        self.chat_id: int = 0
-
-    def set_name(self, name: str) -> None:
-        self.name = name
-
-    def set_chat_id(self, chat_id: int) -> None:
-        self.chat_id = chat_id
-
-    def dump(self) -> None:
-        print("=== Job ===")
-        print(f"jid: {self.job_id}")
-        print(f"cid: {self.chat_id}")
-        print(f"name: {self.name}")
 
 
 class CollectorBot:
